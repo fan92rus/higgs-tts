@@ -86,6 +86,12 @@
         </span>
         <span class="tab__label">История<small>History</small></span>
       </button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="presets">
+        <span class="tab__ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </span>
+        <span class="tab__label">Пресеты<small>Voices</small></span>
+      </button>
       <button class="tab" role="tab" aria-selected="false" data-tab="settings">
         <span class="tab__ico" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
@@ -347,6 +353,44 @@
         </div>
       </section>
 
+      <!-- ============ TAB: PRESETS ============ -->
+      <section class="panel" id="panel-presets" role="tabpanel" aria-label="Пресеты" hidden>
+        <div class="grid">
+          <div class="col col--main">
+            <div class="card glass enter">
+              <div class="card__head">
+                <h2 class="card__title">Пресет-голоса <small class="muted">Voices</small></h2>
+                <button class="btn btn--ghost btn--xs" id="btnRefreshVoices" title="Обновить список">⟳</button>
+              </div>
+              <div class="voices-manager" id="voicesManager">
+                <div class="dropzone" id="presetDropzone" tabindex="0" role="button" aria-label="Загрузить пресет-голос">
+                  <input type="file" id="presetFile" accept=".wav,.mp3,audio/*" hidden />
+                  <div class="dropzone__inner">
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                    <p class="dropzone__title">Перетащите .wav или <span class="link">выберите файл</span></p>
+                    <p class="dropzone__sub">Загруженные голоса сразу появятся в списке пресетов</p>
+                  </div>
+                </div>
+                <div class="voices-list" id="voicesList">
+                  <p class="field__desc" style="padding:8px 0">Загрузка списка…</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside class="col col--side">
+            <div class="card glass tipcard enter">
+              <h3 class="tipcard__title">О пресетах</h3>
+              <ul class="tiplist">
+                <li>WAV-файлы сохраняются в папку <code>voices/</code> на сервере.</li>
+                <li>После загрузки голос сразу доступен в выпадашке «Голос» на вкладке «Генерация».</li>
+                <li>Рядом с WAV можно положить <code>.txt</code> файл с тем же именем — описание появится в списке.</li>
+                <li>Клик по ✕ удаляет пресет.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
       <!-- ============ TAB: SETTINGS ============ -->
       <section class="panel" id="panel-settings" role="tabpanel" aria-label="Настройки" hidden>
         <div class="grid grid--settings">
@@ -375,25 +419,6 @@
           </div>
 
           <aside class="col col--side">
-            <div class="card glass enter enter--d1">
-              <div class="card__head">
-                <h2 class="card__title">Пресет-голоса <small class="muted">Voices</small></h2>
-                <button class="btn btn--ghost btn--xs" id="btnRefreshVoices" title="Обновить список">⟳</button>
-              </div>
-              <div class="voices-manager" id="voicesManager">
-                <div class="dropzone dropzone--sm" id="presetDropzone" tabindex="0" role="button" aria-label="Загрузить пресет-голос">
-                  <input type="file" id="presetFile" accept=".wav,.mp3,audio/*" hidden />
-                  <div class="dropzone__inner">
-                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-                    <p class="dropzone__title">Загрузить .wav как пресет</p>
-                  </div>
-                </div>
-                <div class="voices-list" id="voicesList">
-                  <p class="field__desc" style="padding:8px 0">Загрузка списка…</p>
-                </div>
-              </div>
-            </div>
-
             <div class="card glass about enter enter--d2">
               <h2 class="card__title">О программе <small class="muted">About</small></h2>
               <div class="about__logo">
@@ -442,6 +467,7 @@
         </button>
       </div>
       <div class="sheet__body">
+        <button class="sheet__item" data-goto-tab="presets">Управление пресет-голосами</button>
         <button class="sheet__item" data-goto-tab="settings">Открыть раздел «Настройки»</button>
         <button class="sheet__item" id="sheetReload">Переподготовить модель</button>
         <div class="kv kv--compact" id="sheetHw"></div>

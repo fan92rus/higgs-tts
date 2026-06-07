@@ -873,14 +873,12 @@ function setupSettings() {
     setSliders(cloneSliders, effectiveDefaults());
     toast('Параметры по умолчанию сохранены', 'ok');
   });
-
-  setupVoicesManager();
 }
 
 /* ------------------------------------------------------------
    13a. Voices manager (Settings tab)
    ------------------------------------------------------------ */
-function setupVoicesManager() {
+function setupPresets() {
   const dz = $('#presetDropzone');
   const input = $('#presetFile');
   if (!dz) return;
@@ -1231,6 +1229,7 @@ async function init() {
   setupGenerate();
   setupClone();
   setupSettings();
+  setupPresets();
 
   $('#btnClearHistory').addEventListener('click', () => {
     LS.set(HIST_KEY, []); renderHistory(); toast('История очищена', 'info');
