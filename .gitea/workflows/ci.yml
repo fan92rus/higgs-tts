@@ -1,0 +1,179 @@
+# ============================================================================
+# Higgs Audio v3 TTS — CI/CD Pipeline (Gitea Actions)
+# ============================================================================
+# Jobs:
+#   1. lint-and-test   → ruff + pytest (юнит-тесты без GPU)
+#   2. build-docker    → сборка образа, push в registry
+#   3. deploy          → деплой на сервер через Portainer API
+#
+# Trigger: push в ветку main
+# Runner: self-hosted, Linux, с GPU (для сборки с CUDA)
+# Secrets: PORTAINER_URL, PORTAINER_TOKEN, PORTAINER_STACK_ID,
+#          REGISTRY_USER, REGISTRY_PASSWORD, HOST_IP
+# ============================================================================
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  DOCKER_IMAGE: higgs-tts:latest
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/higgs-tts
+  DEPLOY_DIR: /opt/higgs-tts
+
+# Отменять предыдущий запуск на той же ветке, если новый ещё идёт
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Job 1: Линтинг + юнит-тесты ─────────────────────────────────────────
+  lint-and-test:
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          # Install torch (CPU version for tests — no GPU needed to test API logic)
+          pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install pytest pytest-asyncio httpx ruff
+
+      - name: Lint with ruff
+        run: ruff check src/
+
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short -x
+        env:
+          HIGGS_NO_AUTOSTART: "1"
+
+  # ─── Job 2: Сборка Docker-образа ──────────────────────────────────────────
+  build-docker:
+    runs-on: [self-hosted, linux, x64, gpu]
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "version=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "tags=${{ env.REGISTRY_IMAGE }}:latest,${{ env.REGISTRY_IMAGE }}:$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=registry,ref=${{ env.REGISTRY_IMAGE }}:cache
+          cache-to: type=registry,ref=${{ env.REGISTRY_IMAGE }}:cache,mode=max
+
+  # ─── Job 3: Деплой на сервер через Portainer API ──────────────────────────
+  deploy:
+    runs-on: [self-hosted, linux, x64]
+    needs: build-docker
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (jq, curl)
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends jq curl
+
+      - name: Authenticate with Portainer
+        id: portainer-auth
+        run: |
+          response=$(curl -sf -X POST "${{ secrets.PORTAINER_URL }}/api/auth" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${{ secrets.PORTAINER_USER }}\",\"password\":\"${{ secrets.PORTAINER_PASSWORD }}\"}")
+          token=$(echo "$response" | jq -r '.jwt')
+          echo "token=$token" >> $GITHUB_OUTPUT
+
+      - name: Get current stack file
+        id: stack-file
+        run: |
+          STACK_ID="${{ secrets.PORTAINER_STACK_ID }}"
+          TOKEN="${{ steps.portainer-auth.outputs.token }}"
+          response=$(curl -sf "${{ secrets.PORTAINER_URL }}/api/stacks/${STACK_ID}" \
+            -H "Authorization: Bearer ${TOKEN}")
+          # Сохраняем Env группы из текущего стека
+          echo "$response" | jq -c '.Env // []' > /tmp/stack-env.json
+          echo "env-preserved=true" >> $GITHUB_OUTPUT
+
+      - name: Prepare stack file for deploy
+        run: |
+          # Заменяем ${GITHUB_REPOSITORY_OWNER} на актуальное значение,
+          # убираем build секцию — используем готовый образ из registry
+          OWNER="${{ github.repository_owner }}"
+          sed "s/\${GITHUB_REPOSITORY_OWNER:-user}/$OWNER/g" docker-compose.deploy.yml > /tmp/stack.yml
+
+      - name: Deploy stack via Portainer API
+        run: |
+          STACK_ID="${{ secrets.PORTAINER_STACK_ID }}"
+          TOKEN="${{ steps.portainer-auth.outputs.token }}"
+          STACK_FILE=$(cat /tmp/stack.yml | jq -Rs .)
+          ENV=$(cat /tmp/stack-env.json)
+
+          curl -sf -X PUT "${{ secrets.PORTAINER_URL }}/api/stacks/${STACK_ID}" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"env\": ${ENV},
+              \"prune\": true,
+              \"pullImage\": true,
+              \"stackFileContent\": ${STACK_FILE}
+            }" || {
+              echo "⚠️ Portainer API PUT failed, trying redeploy endpoint..."
+              curl -sf -X POST "${{ secrets.PORTAINER_URL }}/api/stacks/${STACK_ID}/start" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{}"
+            }
+
+      - name: Wait for rollout and health check
+        run: |
+          HOST="${{ secrets.HOST_IP }}"
+          echo "Waiting for Higgs TTS at http://${HOST}:7861/api/state ..."
+          for i in $(seq 1 30); do
+            response=$(curl -sf "http://${HOST}:7861/api/state" 2>/dev/null || echo "")
+            if [ -n "$response" ]; then
+              phase=$(echo "$response" | jq -r '.phase // "unknown"')
+              echo "✅ Higgs TTS ответил, фаза: ${phase} (attempt $i)"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 5
+          done
+          echo "❌ Health check failed — сервер не ответил за 150 секунд"
+          exit 1
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Higgs TTS v3 успешно задеплоен"
+          echo "   URL: http://${{ secrets.HOST_IP }}:7861"
+          echo "   Образ: ${{ env.REGISTRY_IMAGE }}:${{ github.sha }}"

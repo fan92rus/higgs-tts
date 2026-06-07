@@ -1,0 +1,51 @@
+# ============================================================================
+# Higgs Audio v3 TTS — docker-compose.yml (локальный запуск)
+# ============================================================================
+# Использование:
+#   docker compose build     # собрать образ
+#   docker compose up -d     # запустить
+#   docker compose logs -f   # смотреть логи
+#   docker compose down      # остановить
+#
+# Требуется:
+#   - NVIDIA драйвер + nvidia-container-toolkit на хосте
+#   - ~12 ГБ свободного места для модели (volume higgs-models)
+# ============================================================================
+
+services:
+  higgs-tts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: higgs-tts:latest
+    container_name: higgs-tts
+    ports:
+      - "7861:7861"
+    volumes:
+      - higgs-models:/app/models          # веса модели (~9.3 ГБ)
+      - higgs-outputs:/app/outputs        # сгенерированные аудио
+      - higgs-cache:/app/.cache           # кэш HuggingFace / Torch
+      - ./voices:/app/voices:ro           # пресет-голоса (опционально)
+    environment:
+      - HIGGS_MODE=auto                   # auto|bf16|fp16|8bit|4bit|cpu
+      - HIGGS_HOST=0.0.0.0
+      - HIGGS_PORT=7861
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:7861/api/state"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 300s                   # первый запуск — долгая загрузка
+
+volumes:
+  higgs-models:
+  higgs-outputs:
+  higgs-cache:

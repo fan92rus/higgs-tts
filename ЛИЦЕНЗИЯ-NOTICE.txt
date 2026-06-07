@@ -1,0 +1,51 @@
+================================================================
+ Higgs Audio v3 TTS — Portable by Neurogen
+ Уведомление о лицензиях / License notice
+================================================================
+
+МОДЕЛЬ / MODEL
+--------------
+Higgs Audio v3 TTS  (bosonai/higgs-audio-v3-tts-4b)
+© Boson AI.
+
+Распространяется по лицензии:
+  «Boson Higgs Audio v3 Research and Non-Commercial License».
+
+Released under the Boson Higgs Audio v3 Research and Non-Commercial License.
+
+Это означает / This means:
+  • Только исследовательское и НЕКОММЕРЧЕСКОЕ использование.
+    Research and NON-COMMERCIAL use only.
+  • Коммерческое / продакшн / платное использование требует отдельной
+    коммерческой лицензии у Boson AI.
+    Commercial, hosted or revenue-generating use requires a separate
+    commercial license from Boson AI.
+
+ЗАПРЕЩЕНО / PROHIBITED:
+  • Клонирование голоса без согласия владельца голоса.
+  • Выдача себя за другого, мошенничество, дезинформация на выборах.
+  • Биометрическая слежка и любое незаконное применение.
+  (Voice cloning without consent, impersonation, fraud, election
+   deception, biometric surveillance, or any unlawful use.)
+
+Полный текст лицензии модели: см. файл LICENSE в загруженных весах
+(папка models\original\LICENSE после первого запуска) и страницу модели:
+  https://huggingface.co/bosonai/higgs-audio-v3-tts-4b
+
+
+СБОРКА / BUILD
+--------------
+Портативная сборка, движок инференса (порт на чистый PyTorch + transformers),
+десктоп-интерфейс и установщик — «Portable by Neurogen».
+
+Части кода движка и кодека портированы из проекта sgl-project/sglang-omni
+(лицензия Apache-2.0).
+
+Используемые библиотеки сохраняют свои оригинальные лицензии
+(PyTorch, HuggingFace Transformers, FastAPI, pywebview, bitsandbytes и др.).
+
+================================================================
+ Используя эту сборку, вы соглашаетесь соблюдать условия лицензии
+ модели Higgs Audio v3. Ответственность за использование несёт
+ конечный пользователь.
+================================================================

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Higgs Audio v3 TTS — Portable by Neurogen</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!--
+    Higgs Audio v3 TTS — Portable by Neurogen
+    Single-page TTS UI. Vanilla HTML/CSS/JS, no build step, no runtime CDN.
+    Runs inside pywebview AND in any modern browser. Fully offline.
+  -->
+</head>
+<body>
+  <!-- ================= Animated aurora background ================= -->
+  <div class="aurora" aria-hidden="true">
+    <span class="aurora__blob aurora__blob--1"></span>
+    <span class="aurora__blob aurora__blob--2"></span>
+    <span class="aurora__blob aurora__blob--3"></span>
+    <div class="aurora__grain"></div>
+  </div>
+
+  <!-- ================= App shell ================= -->
+  <div class="app" id="app">
+
+    <!-- ----------- Top bar ----------- -->
+    <header class="topbar glass" role="banner">
+      <div class="topbar__brand">
+        <!-- Inline SVG logo (diamond / aurora gem) -->
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="34" height="34" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="lg1" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7BCFA3"/>
+                <stop offset="1" stop-color="#827DBD"/>
+              </linearGradient>
+              <linearGradient id="lg2" x1="24" y1="6" x2="24" y2="42" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#fff" stop-opacity=".9"/>
+                <stop offset="1" stop-color="#fff" stop-opacity=".15"/>
+              </linearGradient>
+            </defs>
+            <path d="M24 3 7 14v20l17 11 17-11V14L24 3Z" fill="url(#lg1)" opacity=".22"/>
+            <path d="M24 3 7 14v20l17 11 17-11V14L24 3Z" stroke="url(#lg1)" stroke-width="1.6"/>
+            <path d="m24 12 9 6v12l-9 6-9-6V18l9-6Z" fill="url(#lg1)"/>
+            <path d="m24 12 9 6-9 4-9-4 9-6Z" fill="url(#lg2)" opacity=".55"/>
+          </svg>
+        </span>
+        <div class="topbar__titles">
+          <h1 class="topbar__title">◆ HIGGS AUDIO <span class="topbar__ver">v3</span></h1>
+          <p class="topbar__sub">Portable by <strong>Neurogen</strong></p>
+        </div>
+      </div>
+
+      <div class="topbar__right">
+        <div class="hwbadge" id="hwBadge" title="Аппаратное обеспечение / Hardware">
+          <span class="hwbadge__dot" id="hwDot"></span>
+          <span class="hwbadge__text" id="hwText">Определение оборудования…</span>
+        </div>
+        <button class="iconbtn" id="btnSettingsGear" title="Настройки" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ----------- Tabs ----------- -->
+    <nav class="tabs" role="tablist" aria-label="Разделы">
+      <button class="tab is-active" role="tab" aria-selected="true" data-tab="generate">
+        <span class="tab__ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/><path d="M4 19h16" opacity=".0"/><path d="M3 12h.01M3 6h.01M3 18h.01"/></svg>
+        </span>
+        <span class="tab__label">Генерация<small>Generate</small></span>
+      </button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="clone">
+        <span class="tab__ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4"/></svg>
+        </span>
+        <span class="tab__label">Клон голоса<small>Voice Clone</small></span>
+      </button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="history">
+        <span class="tab__ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        </span>
+        <span class="tab__label">История<small>History</small></span>
+      </button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="settings">
+        <span class="tab__ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+        </span>
+        <span class="tab__label">Настройки<small>Settings</small></span>
+      </button>
+    </nav>
+
+    <!-- ----------- Main scroll area ----------- -->
+    <main class="main" id="main">
+
+      <!-- ============ TAB: GENERATE ============ -->
+      <section class="panel is-active" id="panel-generate" role="tabpanel" aria-label="Генерация">
+        <div class="grid">
+          <!-- Left: editor + controls -->
+          <div class="col col--main">
+            <div class="card glass enter">
+              <div class="card__head">
+                <h2 class="card__title">Текст для озвучки</h2>
+                <span class="card__hint" id="charCount">0 символов</span>
+              </div>
+
+              <!-- Inline control-token pickers -->
+              <div class="pillbars">
+                <div class="pillbar" data-group="emotions">
+                  <span class="pillbar__label">Эмоция</span>
+                  <div class="pillbar__row" id="pills-emotions"></div>
+                </div>
+                <div class="pillbar" data-group="styles">
+                  <span class="pillbar__label">Стиль</span>
+                  <div class="pillbar__row" id="pills-styles"></div>
+                </div>
+                <div class="pillbar" data-group="prosody">
+                  <span class="pillbar__label">Просодия</span>
+                  <div class="pillbar__row" id="pills-prosody"></div>
+                </div>
+                <div class="pillbar" data-group="sfx">
+                  <span class="pillbar__label">SFX</span>
+                  <div class="pillbar__row" id="pills-sfx"></div>
+                </div>
+                <div class="pillbar" data-group="stress">
+                  <span class="pillbar__label">Ударение</span>
+                  <div class="pillbar__row">
+                    <button type="button" class="pill" id="genStressAcute" data-tip="Знак ударения ́ · поставьте курсор СРАЗУ ПОСЛЕ ударной гласной (за́мок)"><span class="pill__emoji">◌́</span><span>знак ударения</span></button>
+                    <button type="button" class="pill" id="genStressPlus" data-tip="Плюс перед ударной гласной · поставьте курсор ПЕРЕД гласной (з+амок)"><span class="pill__emoji">+</span><span>плюс</span></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="textarea-wrap">
+                <textarea id="genText" class="textarea" spellcheck="false"
+                  placeholder="Например: <|emotion:amusement|> Привет! Это Higgs Audio v3 — портативная сборка от Neurogen. <|prosody:pause|> Звучит как живой человек, не правда ли?"></textarea>
+                <button class="textarea__clear" id="btnClearText" title="Очистить" aria-label="Очистить текст">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <div class="hintline">
+                <span class="kbd">◆</span> Delivery-токены (эмоция/стиль/скорость) ставятся в начало. Позиционные (пауза/SFX) — в место курсора.
+              </div>
+            </div>
+
+            <!-- Result card -->
+            <div class="card glass result" id="resultCard" hidden>
+              <div class="card__head">
+                <h2 class="card__title">Результат <small class="muted">Result</small></h2>
+                <div class="result__meta" id="resultMeta"></div>
+              </div>
+
+              <div class="player">
+                <button class="playbtn" id="playBtn" aria-label="Воспроизвести">
+                  <svg class="ic-play" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="ic-pause" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+                <div class="player__body">
+                  <canvas class="waveform" id="waveform" height="64"></canvas>
+                  <div class="player__time">
+                    <span id="curTime">0:00</span>
+                    <span id="totTime">0:00</span>
+                  </div>
+                </div>
+                <button class="btn btn--ghost btn--sm" id="downloadBtn" title="Скачать WAV">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                  WAV
+                </button>
+              </div>
+              <audio id="audioEl" preload="auto"></audio>
+            </div>
+          </div>
+
+          <!-- Right: voice + sampling -->
+          <aside class="col col--side">
+            <div class="card glass enter enter--d1">
+              <div class="card__head"><h2 class="card__title">Голос <small class="muted">Voice</small></h2></div>
+              <div class="field">
+                <label class="field__label" for="voiceSelect">Пресет голоса</label>
+                <div class="select-wrap">
+                  <select id="voiceSelect" class="select"></select>
+                  <svg class="select__chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <p class="field__desc" id="voiceDesc">Без референса — модель сама выбирает тембр.</p>
+              </div>
+            </div>
+
+            <div class="card glass enter enter--d2">
+              <div class="card__head">
+                <h2 class="card__title">Параметры <small class="muted">Sampling</small></h2>
+                <button class="btn btn--ghost btn--xs" id="btnResetSampling" title="Сбросить к значениям по умолчанию">Сброс</button>
+              </div>
+              <div class="sliders" id="samplingSliders"><!-- built by JS --></div>
+
+              <div class="field field--seed">
+                <label class="field__label" for="seedInput">Seed <small class="muted">(опц.)</small></label>
+                <div class="seed-row">
+                  <input id="seedInput" class="input" type="number" inputmode="numeric" placeholder="случайный" min="0" />
+                  <button class="btn btn--ghost btn--sm" id="btnRandSeed" title="Случайный seed">🎲</button>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn--primary btn--big" id="generateBtn">
+              <span class="btn__glow" aria-hidden="true"></span>
+              <span class="btn__content">
+                <svg class="btn__ico" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <span class="btn__txt">СГЕНЕРИРОВАТЬ</span>
+              </span>
+              <span class="btn__progress" id="genProgress"><span class="btn__bar"></span></span>
+            </button>
+            <div class="genstatus" id="genStatus" hidden>
+              <span class="genstatus__dot" aria-hidden="true"></span>
+              <span class="genstatus__txt" id="genStatusTxt">Генерация…</span>
+              <button class="genstatus__stop" id="genStopBtn" type="button">⏹ Стоп</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============ TAB: VOICE CLONE ============ -->
+      <section class="panel" id="panel-clone" role="tabpanel" aria-label="Клон голоса" hidden>
+        <div class="grid">
+          <div class="col col--main">
+            <div class="card glass enter">
+              <div class="card__head">
+                <h2 class="card__title">Референс голоса <small class="muted">Reference</small></h2>
+                <span class="card__hint">.wav / .mp3</span>
+              </div>
+
+              <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Загрузить референс">
+                <input type="file" id="refFile" accept=".wav,.mp3,audio/*" hidden />
+                <div class="dropzone__inner" id="dropzoneInner">
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                  <p class="dropzone__title">Перетащите аудио или <span class="link">выберите файл</span></p>
+                  <p class="dropzone__sub">5–30 секунд чистой речи дают лучший клон</p>
+                </div>
+              </div>
+
+              <div class="reffile" id="refFileInfo" hidden>
+                <div class="reffile__icon">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                </div>
+                <div class="reffile__body">
+                  <span class="reffile__name" id="refFileName">—</span>
+                  <span class="reffile__meta" id="refFileMeta"></span>
+                </div>
+                <button class="iconbtn iconbtn--sm" id="refFileRemove" title="Удалить референс" aria-label="Удалить референс">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="refText">Текст референса <small class="muted">(улучшает клон)</small></label>
+                <textarea id="refText" class="textarea textarea--sm" spellcheck="false" placeholder="Дословный текст того, что произнесено в референсном аудио…"></textarea>
+              </div>
+            </div>
+
+            <div class="card glass enter enter--d1">
+              <div class="card__head"><h2 class="card__title">Текст для озвучки <small class="muted">Text</small></h2><span class="card__hint" id="cloneCharCount">0 символов</span></div>
+              <div class="textarea-wrap">
+                <textarea id="cloneText" class="textarea" spellcheck="false" placeholder="Текст, который будет озвучен клонированным голосом…"></textarea>
+              </div>
+              <button class="btn btn--primary btn--big" id="cloneGenerateBtn" style="margin-top:14px">
+                <span class="btn__glow" aria-hidden="true"></span>
+                <span class="btn__content">
+                  <svg class="btn__ico" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <span class="btn__txt">ОЗВУЧИТЬ КЛОНОМ</span>
+                </span>
+                <span class="btn__progress" id="cloneGenProgress"><span class="btn__bar"></span></span>
+              </button>
+              <div class="genstatus" id="cloneGenStatus" hidden>
+                <span class="genstatus__dot" aria-hidden="true"></span>
+                <span class="genstatus__txt" id="cloneGenStatusTxt">Генерация…</span>
+                <button class="genstatus__stop" id="cloneGenStopBtn" type="button">⏹ Стоп</button>
+              </div>
+            </div>
+
+            <div class="card glass result" id="cloneResultCard" hidden>
+              <div class="card__head"><h2 class="card__title">Результат <small class="muted">Result</small></h2><div class="result__meta" id="cloneResultMeta"></div></div>
+              <div class="player">
+                <button class="playbtn" id="clonePlayBtn" aria-label="Воспроизвести">
+                  <svg class="ic-play" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="ic-pause" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+                <div class="player__body">
+                  <canvas class="waveform" id="cloneWaveform" height="64"></canvas>
+                  <div class="player__time"><span id="cloneCurTime">0:00</span><span id="cloneTotTime">0:00</span></div>
+                </div>
+                <button class="btn btn--ghost btn--sm" id="cloneDownloadBtn" title="Скачать WAV">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                  WAV
+                </button>
+              </div>
+              <audio id="cloneAudioEl" preload="auto"></audio>
+            </div>
+          </div>
+
+          <aside class="col col--side">
+            <div class="card glass enter enter--d1">
+              <div class="card__head"><h2 class="card__title">Параметры <small class="muted">Sampling</small></h2></div>
+              <div class="sliders" id="cloneSamplingSliders"></div>
+            </div>
+            <div class="card glass tipcard enter enter--d2">
+              <h3 class="tipcard__title">Советы по клонированию</h3>
+              <ul class="tiplist">
+                <li>Используйте чистую запись без шума и музыки.</li>
+                <li>10–20 секунд речи достаточно.</li>
+                <li>Точный текст референса заметно повышает сходство.</li>
+                <li>Один говорящий, ровная интонация.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============ TAB: HISTORY ============ -->
+      <section class="panel" id="panel-history" role="tabpanel" aria-label="История" hidden>
+        <div class="card glass enter">
+          <div class="card__head">
+            <h2 class="card__title">История генераций <small class="muted">History</small></h2>
+            <button class="btn btn--ghost btn--sm" id="btnClearHistory">Очистить всё</button>
+          </div>
+          <div class="history" id="historyList"></div>
+          <div class="empty" id="historyEmpty">
+            <svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+            <p class="empty__title">Пока пусто</p>
+            <p class="empty__sub">Сгенерированные аудио появятся здесь</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TAB: SETTINGS ============ -->
+      <section class="panel" id="panel-settings" role="tabpanel" aria-label="Настройки" hidden>
+        <div class="grid grid--settings">
+          <div class="col col--main">
+            <div class="card glass enter">
+              <div class="card__head"><h2 class="card__title">Движок <small class="muted">Engine</small></h2></div>
+              <div class="kv" id="engineKV"></div>
+            </div>
+
+            <div class="card glass enter enter--d1">
+              <div class="card__head">
+                <h2 class="card__title">Параметры по умолчанию <small class="muted">Defaults</small></h2>
+                <button class="btn btn--ghost btn--sm" id="btnSaveDefaults">Сохранить</button>
+              </div>
+              <div class="sliders" id="defaultSamplingSliders"></div>
+              <p class="field__desc">Эти значения подставляются при запуске приложения.</p>
+            </div>
+
+            <div class="card glass enter enter--d2">
+              <div class="card__head"><h2 class="card__title">Папка вывода <small class="muted">Output</small></h2></div>
+              <div class="notebox">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+                <p>Готовые WAV сохраняются в папку <code>outputs/</code> рядом с приложением, а также доступны в разделе «История».</p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="col col--side">
+            <div class="card glass about enter enter--d1">
+              <h2 class="card__title">О программе <small class="muted">About</small></h2>
+              <div class="about__logo">
+                <svg viewBox="0 0 48 48" width="56" height="56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M24 3 7 14v20l17 11 17-11V14L24 3Z" stroke="url(#lg1)" stroke-width="1.6"/>
+                  <path d="m24 12 9 6v12l-9 6-9-6V18l9-6Z" fill="url(#lg1)"/>
+                </svg>
+              </div>
+              <p class="about__name">Higgs Audio <strong>v3</strong> TTS</p>
+              <p class="about__build">Portable by <strong>Neurogen</strong></p>
+              <p class="about__ver" id="aboutVersion">версия —</p>
+              <p class="about__model" id="aboutModel"></p>
+              <div class="about__license">
+                Модель Higgs Audio v3 — research / non-commercial.
+                Сборка: <strong>Portable by Neurogen</strong>.
+              </div>
+              <p class="about__credit">Сделано с любовью для подписчиков канала <strong>Neurogen</strong>.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ----------- Footer ----------- -->
+    <footer class="footer glass">
+      <span class="footer__brand">◆ Higgs Audio v3 · <strong>Portable by Neurogen</strong></span>
+      <span class="footer__dot">·</span>
+      <span class="footer__state" id="footerState">готов к работе</span>
+      <span class="footer__spacer"></span>
+      <span class="footer__ver" id="footerVer"></span>
+    </footer>
+  </div>
+
+  <!-- ================= Toast host ================= -->
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ================= Settings quick sheet (gear) ================= -->
+  <div class="sheet" id="settingsSheet" hidden>
+    <div class="sheet__backdrop" data-close-sheet></div>
+    <div class="sheet__panel glass" role="dialog" aria-modal="true" aria-label="Быстрые настройки">
+      <div class="sheet__head">
+        <h3>Быстрые настройки</h3>
+        <button class="iconbtn iconbtn--sm" data-close-sheet aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="sheet__body">
+        <button class="sheet__item" data-goto-tab="settings">Открыть раздел «Настройки»</button>
+        <button class="sheet__item" id="sheetReload">Переподготовить модель</button>
+        <div class="kv kv--compact" id="sheetHw"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= First-run / loading modal ================= -->
+  <div class="loader" id="loader">
+    <div class="loader__bg" aria-hidden="true"></div>
+    <div class="loader__card glass">
+      <div class="loader__logo">
+        <svg viewBox="0 0 48 48" width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="loader__gem" d="M24 3 7 14v20l17 11 17-11V14L24 3Z" stroke="url(#lg1)" stroke-width="1.6"/>
+          <path d="m24 12 9 6v12l-9 6-9-6V18l9-6Z" fill="url(#lg1)"/>
+        </svg>
+      </div>
+      <h2 class="loader__title">Higgs Audio v3</h2>
+      <p class="loader__brand">Portable by <strong>Neurogen</strong></p>
+
+      <div class="loader__phases" id="loaderPhases">
+        <span class="phase" data-phase="downloading">Скачивание</span>
+        <span class="phase" data-phase="converting">Конвертация</span>
+        <span class="phase" data-phase="loading">Загрузка</span>
+        <span class="phase" data-phase="ready">Готово</span>
+      </div>
+
+      <div class="loader__bar">
+        <div class="loader__fill" id="loaderFill"></div>
+        <div class="loader__shimmer" id="loaderShimmer"></div>
+      </div>
+      <div class="loader__meta">
+        <span class="loader__msg" id="loaderMsg">Подготовка движка…</span>
+        <span class="loader__pct" id="loaderPct"></span>
+      </div>
+
+      <div class="loader__error" id="loaderError" hidden>
+        <p class="loader__errtxt" id="loaderErrText"></p>
+        <button class="btn btn--primary" id="loaderRetry">Повторить</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

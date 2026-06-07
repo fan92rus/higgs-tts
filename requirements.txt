@@ -1,0 +1,27 @@
+# Higgs Audio v3 TTS — Portable by Neurogen
+# torch / torchaudio are installed separately by "Установка (первый запуск).bat"
+# (from the CUDA or CPU PyTorch index), so they are intentionally NOT listed here.
+
+# IMPORTANT - verified working trio on Windows (do not bump without testing):
+#   transformers 5.5.0  (5.6+ imports torch.float8_e8m0fnu which needs torch>=2.7;
+#                        the cu121 PyTorch wheels cap at torch 2.5.1 -> crash)
+#   safetensors 0.4.5   (0.5+/0.7 segfault when loading bf16 tensors on Windows)
+transformers==5.5.0
+accelerate>=1.0.0
+safetensors==0.4.5
+huggingface_hub>=0.24.0
+numpy>=1.26
+
+# Audio I/O
+soundfile>=0.12.1
+
+# Backend + desktop UI
+fastapi>=0.110.0
+uvicorn>=0.27.0
+pywebview>=5.0
+requests>=2.31.0
+python-multipart>=0.0.9
+
+# Quantization (8-bit / 4-bit on NVIDIA GPUs). Optional — the app falls back to
+# fp16/CPU automatically if this is missing.
+bitsandbytes>=0.43.0 ; platform_system == "Windows"

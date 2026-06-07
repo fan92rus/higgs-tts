@@ -1,0 +1,47 @@
+# ============================================================================
+# Higgs Audio v3 TTS — docker-compose.deploy.yml (деплой на сервер)
+# ============================================================================
+# Используется CI/CD pipeline (Gitea Actions). Образ приходит из registry.
+# Требуется предварительно создать volumes:
+#   docker volume create higgs-models
+#   docker volume create higgs-outputs
+#   docker volume create higgs-cache
+# ============================================================================
+
+services:
+  higgs-tts:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-user}/higgs-tts:latest
+    container_name: higgs-tts
+    ports:
+      - "${HIGGS_PORT:-7861}:7861"
+    volumes:
+      - higgs-models:/app/models
+      - higgs-outputs:/app/outputs
+      - higgs-cache:/app/.cache
+      - /opt/higgs-tts/voices:/app/voices:ro
+    environment:
+      - HIGGS_MODE=${HIGGS_MODE:-auto}
+      - HIGGS_HOST=0.0.0.0
+      - HIGGS_PORT=7861
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:7861/api/state"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 300s
+
+volumes:
+  higgs-models:
+    external: true
+  higgs-outputs:
+    external: true
+  higgs-cache:
+    external: true

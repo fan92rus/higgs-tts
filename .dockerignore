@@ -1,0 +1,46 @@
+# Higgs TTS — .dockerignore
+
+# Windows portable Python (huge, ~300 MB, not needed on Linux)
+python/
+
+# Local virtual environment (created by Установка.bat)
+runtime/
+
+# Windows batch files
+*.bat
+*.cmd
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+.vs/
+*.suo
+*.user
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Node.js (not used in backend, but just in case)
+node_modules/
+
+# Model weights (downloaded at runtime, persisted via volume)
+models/
+outputs/
+
+# Cache (persisted via volume)
+.cache/
+
+# Documentation & license (not needed at runtime)
+README.md
+ЛИЦЕНЗИЯ-NOTICE.txt
