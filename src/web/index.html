@@ -190,6 +190,12 @@
               </div>
             </div>
 
+            <!-- Model status (idle / loading) -->
+            <div class="model-status" id="modelStatus" hidden>
+              <span class="model-status__dot"></span>
+              <span class="model-status__txt" id="modelStatusTxt"></span>
+            </div>
+
             <div class="card glass enter enter--d2">
               <div class="card__head">
                 <h2 class="card__title">Параметры <small class="muted">Sampling</small></h2>
@@ -306,6 +312,12 @@
               <div class="card__head"><h2 class="card__title">Параметры <small class="muted">Sampling</small></h2></div>
               <div class="sliders" id="cloneSamplingSliders"></div>
             </div>
+            <!-- Model status (idle / loading) -->
+            <div class="model-status" id="cloneModelStatus" hidden>
+              <span class="model-status__dot"></span>
+              <span class="model-status__txt" id="cloneModelStatusTxt"></span>
+            </div>
+
             <div class="card glass tipcard enter enter--d2">
               <h3 class="tipcard__title">Советы по клонированию</h3>
               <ul class="tiplist">

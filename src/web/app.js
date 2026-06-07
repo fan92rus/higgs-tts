@@ -836,14 +836,23 @@ function effectiveDefaults() {
 }
 function renderEngineKV() {
   const hw = (App.state && App.state.hardware) || {};
+  const st = App.state || {};
   const info = App.info || {};
   const rows = [
     ['Устройство', hw.device === 'cuda' ? `GPU (CUDA)` : (hw.device === 'cpu' ? 'CPU' : '—'), hw.device === 'cuda'],
     ['Видеокарта', hw.gpu_name || (hw.device === 'cpu' ? 'не используется' : '—'), false],
     ['VRAM', hw.vram_total_gb != null ? `${hw.vram_free_gb != null ? hw.vram_free_gb.toFixed(1)+' / ' : ''}${hw.vram_total_gb.toFixed(1)} ГБ` : '—', false],
     ['Точность', (hw.precision || '—'), true],
-    ['Статус', App.state ? phaseRu(App.state.phase) : '—', App.ready],
+    ['Статус', App.state ? phaseRu(st.phase) : '—', App.ready],
   ];
+  if (st.phase === 'idle' && st.idle_remaining_s != null) {
+    rows.push(['Модель', 'выгружена из VRAM · загрузится по запросу', false]);
+  } else if (st.idle_remaining_s != null) {
+    const remaining = Math.round(st.idle_remaining_s);
+    if (remaining > 0) {
+      rows.push(['До выгрузки', `${remaining} с (≈${Math.round(remaining / 60)} мин)`, false]);
+    }
+  }
   if (hw.reason) rows.push(['Почему так', hw.reason, false]);
   $('#engineKV').innerHTML = rows.map(([k, v, accent]) =>
     `<div class="kv__row"><span class="kv__k">${k}</span><span class="kv__v${accent ? ' accent':''}">${escapeHtml(String(v))}</span></div>`).join('');
@@ -874,11 +883,23 @@ function setupSheet() {
 }
 function renderSheetHw() {
   const hw = (App.state && App.state.hardware) || {};
-  $('#sheetHw').innerHTML = [
+  const st = App.state || {};
+  const rows = [
     ['Устройство', hw.device === 'cuda' ? 'GPU' : (hw.device || '—')],
     ['Точность', hw.precision || '—'],
-    ['Статус', App.state ? phaseRu(App.state.phase) : '—'],
-  ].map(([k, v]) => `<div class="kv__row"><span class="kv__k">${k}</span><span class="kv__v">${escapeHtml(String(v))}</span></div>`).join('');
+    ['Статус', st ? phaseRu(st.phase) : '—'],
+  ];
+  if (st.phase === 'idle') {
+    rows.push(['Модель', 'выгружена · авто-загрузка']);
+  } else if (st.phase === 'ready' && st.idle_remaining_s != null) {
+    const remaining = Math.round(st.idle_remaining_s);
+    if (remaining > 0) {
+      rows.push(['До выгрузки', `${remaining} с`]);
+    }
+  }
+  $('#sheetHw').innerHTML = rows.map(([k, v]) =>
+    `<div class="kv__row"><span class="kv__k">${k}</span><span class="kv__v">${escapeHtml(String(v))}</span></div>`
+  ).join('');
 }
 
 /* ------------------------------------------------------------
@@ -886,17 +907,26 @@ function renderSheetHw() {
    ------------------------------------------------------------ */
 function renderHardware() {
   const hw = (App.state && App.state.hardware) || {};
+  const st = App.state || {};
   const badge = $('#hwBadge');
   const text = $('#hwText');
   badge.dataset.device = hw.device || '';
-  if (hw.reason) badge.title = hw.reason;   // hover to see why this mode
+  if (st.phase === 'idle' && st.idle_remaining_s != null) {
+    // Модель выгружена — показываем статус
+    const mins = Math.round(st.idle_remaining_s / 60);
+    badge.dataset.device = 'idle';
+    text.textContent = `Выгружена · авто-загрузка · простояла ${mins} мин`;
+    badge.title = 'Модель выгружена из VRAM. При генерации загрузится автоматически.';
+  } else if (hw.reason) {
+    badge.title = hw.reason;   // hover to see why this mode
+  }
   if (hw.device === 'cuda') {
     const vram = hw.vram_total_gb != null ? `${Math.round(hw.vram_total_gb)}GB` : '';
     const name = (hw.gpu_name || 'GPU').replace(/NVIDIA\s*/i, '').trim();
     text.textContent = `GPU · ${name}${vram ? ' · ' + vram : ''} · ${hw.precision || 'bf16'}`;
   } else if (hw.device === 'cpu') {
     text.textContent = `CPU · ${hw.precision || 'fp32'}`;
-  } else {
+  } else if (st.phase !== 'idle') {
     text.textContent = 'Определение оборудования…';
   }
   renderEngineKV();
@@ -949,6 +979,27 @@ function closeLoader() {
   setTimeout(() => { l.hidden = true; }, 650);
 }
 
+function updateModelStatus(phase, st) {
+  const update = (elId, txtId) => {
+    const el = $(elId);
+    const txt = $(txtId);
+    if (!el || !txt) return;
+    if (phase === 'idle') {
+      el.className = 'model-status model-status--idle';
+      txt.textContent = 'Модель выгружена из VRAM · начните генерацию — загрузится автоматически';
+      el.hidden = false;
+    } else if (phase === 'loading') {
+      el.className = 'model-status model-status--loading';
+      txt.textContent = 'Модель загружается в VRAM…';
+      el.hidden = false;
+    } else {
+      el.hidden = true;
+    }
+  };
+  update('#modelStatus', '#modelStatusTxt');
+  update('#cloneModelStatus', '#cloneModelStatusTxt');
+}
+
 function applyState(st) {
   App.state = st;
   renderHardware();
@@ -959,6 +1010,9 @@ function applyState(st) {
 
   // footer
   setFooter(phaseRu(phase));
+
+  // model status bar (idle / loading)
+  updateModelStatus(phase, st);
 
   // phase pills
   const idx = PHASE_ORDER.indexOf(phase);
