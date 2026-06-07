@@ -1,19 +1,19 @@
 # ============================================================================
-# Higgs Audio v3 TTS — docker-compose.deploy.yml (деплой на сервер)
+# Higgs Audio v3 TTS — docker-compose.deploy.yml
 # ============================================================================
-# Используется CI/CD pipeline (Gitea Actions). Образ приходит из registry.
-# Требуется предварительно создать volumes:
-#   docker volume create higgs-models
-#   docker volume create higgs-outputs
-#   docker volume create higgs-cache
+# Деплой на homeserver (192.168.1.96). Сборка из локального контекста.
+# CI копирует код в /opt/higgs-tts/ и запускает docker compose up -d --build.
+#
+# Доступ: https://higgs.local (через Traefik)
 # ============================================================================
 
 services:
   higgs-tts:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-user}/higgs-tts:latest
+    build:
+      context: /opt/higgs-tts
+      dockerfile: Dockerfile
+    image: higgs-tts:latest
     container_name: higgs-tts
-    ports:
-      - "${HIGGS_PORT:-7861}:7861"
     volumes:
       - higgs-models:/app/models
       - higgs-outputs:/app/outputs
@@ -37,6 +37,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 300s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.higgs.rule=Host(`higgs.local`)"
+      - "traefik.http.routers.higgs.entrypoints=websecure"
+      - "traefik.http.routers.higgs.tls.certresolver=stepca"
+      - "traefik.http.services.higgs.loadbalancer.server.port=7861"
+    networks:
+      - default
+      - proxy
 
 volumes:
   higgs-models:
@@ -44,4 +53,8 @@ volumes:
   higgs-outputs:
     external: true
   higgs-cache:
+    external: true
+
+networks:
+  proxy:
     external: true
