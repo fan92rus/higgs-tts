@@ -119,6 +119,13 @@ const api = {
     if (!r.ok) throw new Error((data && data.error) || `${path} → HTTP ${r.status}`);
     return data;
   },
+  async delete(path) {
+    const r = await fetch(path, { method:'DELETE' });
+    let data = null;
+    try { data = await r.json(); } catch { /* ignore */ }
+    if (!r.ok) throw new Error((data && data.error) || `${path} → HTTP ${r.status}`);
+    return data;
+  },
 };
 
 /* ------------------------------------------------------------
@@ -865,6 +872,104 @@ function setupSettings() {
     setSliders(genSliders, effectiveDefaults());
     setSliders(cloneSliders, effectiveDefaults());
     toast('Параметры по умолчанию сохранены', 'ok');
+  });
+
+  setupVoicesManager();
+}
+
+/* ------------------------------------------------------------
+   13a. Voices manager (Settings tab)
+   ------------------------------------------------------------ */
+function setupVoicesManager() {
+  const dz = $('#presetDropzone');
+  const input = $('#presetFile');
+  if (!dz) return;
+
+  dz.addEventListener('click', () => input.click());
+  dz.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  input.addEventListener('change', () => { if (input.files[0]) uploadPreset(input.files[0]); });
+
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('is-drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); if (ev !== 'dragleave' || !dz.contains(e.relatedTarget)) dz.classList.remove('is-drag'); }));
+  dz.addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if (f) uploadPreset(f); });
+
+  $('#btnRefreshVoices').addEventListener('click', renderVoicesList);
+
+  // Initial render when settings tab becomes visible
+  const settingsTab = document.querySelector('[data-tab="settings"]');
+  if (settingsTab) {
+    settingsTab.addEventListener('click', () => {
+      setTimeout(renderVoicesList, 100);
+    });
+  }
+}
+
+async function uploadPreset(file) {
+  const ok = /\.(wav|mp3)$/i.test(file.name) || /audio\//.test(file.type);
+  if (!ok) { toast('Поддерживаются .wav и .mp3', 'err'); return; }
+  try {
+    const fd = new FormData(); fd.append('file', file);
+    fd.append('name', file.name.replace(/\.\w+$/, '').replace(/[_\s]+/g, ' ').trim());
+    const res = await api.post('/api/upload_preset', fd, true);
+    if (!res || res.ok === false) throw new Error((res && res.error) || 'Ошибка загрузки');
+    toast(`Пресет «${res.name}» загружен (${res.duration_s ? res.duration_s.toFixed(1) + ' с' : 'OK'})`, 'ok');
+    // Refresh voices everywhere
+    if (res.voices) {
+      App.info = App.info || {};
+      App.info.voices = res.voices;
+      buildVoices();
+    }
+    renderVoicesList();
+  } catch (e) {
+    toast(String(e.message || e), 'err', 5000);
+  }
+}
+
+async function deletePreset(presetId) {
+  try {
+    const res = await api.delete('/api/voices/' + encodeURIComponent(presetId));
+    if (res.voices) {
+      App.info = App.info || {};
+      App.info.voices = res.voices;
+      buildVoices();
+    }
+    renderVoicesList();
+    toast('Пресет удалён', 'info');
+  } catch (e) {
+    toast(String(e.message || e), 'err', 5000);
+  }
+}
+
+function renderVoicesList() {
+  const host = $('#voicesList');
+  if (!host) return;
+  const voices = (App.info && App.info.voices) || [];
+  if (voices.length === 0) {
+    host.innerHTML = '<p class="field__desc" style="padding:8px 0;text-align:center">Нет пресет-голосов. Загрузите .wav выше.</p>';
+    return;
+  }
+  host.innerHTML = voices.map(v => `
+    <div class="voice-row">
+      <span class="voice-row__icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+      </span>
+      <div class="voice-row__body">
+        <div class="voice-row__name">${escapeHtml(v.name)}</div>
+        <div class="voice-row__desc">${escapeHtml(v.description || 'Пресет-голос')}</div>
+      </div>
+      <button class="voice-row__del" data-preset-id="${escapeHtml(v.id)}" title="Удалить" aria-label="Удалить">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  `).join('');
+  // Wire delete buttons
+  $$('.voice-row__del', host).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deletePreset(btn.dataset.presetId);
+    });
   });
 }
 

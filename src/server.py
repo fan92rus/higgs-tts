@@ -370,6 +370,62 @@ def api_voices() -> JSONResponse:
     return JSONResponse({"voices": _voices()})
 
 
+@app.post("/api/upload_preset")
+async def api_upload_preset(file: UploadFile = File(...), name: str | None = None) -> JSONResponse:
+    """Загружает WAV-файл в voices/ — он становится доступен как пресет-голос."""
+    config.ensure_dirs()
+    suffix = Path(file.filename or "voice.wav").suffix or ".wav"
+    if suffix.lower() not in (".wav", ".mp3"):
+        return JSONResponse({"ok": False, "error": "Поддерживаются только .wav и .mp3"})
+
+    stem = name.strip() if name else Path(file.filename or "voice").stem
+    # Транслитерация/очистка для имени файла
+    safe_stem = "".join(c for c in stem if c.isalnum() or c in " _-").strip() or "voice"
+    dest = config.VOICES_DIR / f"{safe_stem}{suffix}"
+
+    # Если файл уже существует — добавляем суффикс
+    counter = 1
+    while dest.exists():
+        dest = config.VOICES_DIR / f"{safe_stem}_{counter}{suffix}"
+        counter += 1
+
+    data = await file.read()
+    if not data:
+        return JSONResponse({"ok": False, "error": "Пустой файл"})
+    dest.write_bytes(data)
+
+    try:
+        wav, sr = _load_audio(dest)
+        duration = round(len(wav) / sr, 2) if sr else 0.0
+    except Exception as e:
+        dest.unlink(missing_ok=True)
+        return JSONResponse({"ok": False, "error": f"Не удалось прочитать аудио: {e}"})
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "preset_id": dest.stem,
+            "name": dest.stem.replace("_", " ").title(),
+            "duration_s": duration,
+            "voices": _voices(),
+        }
+    )
+
+
+@app.delete("/api/voices/{preset_id}")
+def api_delete_voice(preset_id: str) -> JSONResponse:
+    """Удаляет пресет-голос из voices/."""
+    path = config.VOICES_DIR / f"{Path(preset_id).stem}.wav"
+    txt = path.with_suffix(".txt")
+    deleted = False
+    if path.is_file():
+        path.unlink()
+        deleted = True
+    if txt.is_file():
+        txt.unlink()
+    return JSONResponse({"ok": deleted, "voices": _voices()})
+
+
 @app.post("/api/upload_reference")
 async def api_upload_reference(file: UploadFile = File(...)) -> JSONResponse:
     config.ensure_dirs()

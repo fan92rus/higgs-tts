@@ -375,7 +375,26 @@
           </div>
 
           <aside class="col col--side">
-            <div class="card glass about enter enter--d1">
+            <div class="card glass enter enter--d1">
+              <div class="card__head">
+                <h2 class="card__title">Пресет-голоса <small class="muted">Voices</small></h2>
+                <button class="btn btn--ghost btn--xs" id="btnRefreshVoices" title="Обновить список">⟳</button>
+              </div>
+              <div class="voices-manager" id="voicesManager">
+                <div class="dropzone dropzone--sm" id="presetDropzone" tabindex="0" role="button" aria-label="Загрузить пресет-голос">
+                  <input type="file" id="presetFile" accept=".wav,.mp3,audio/*" hidden />
+                  <div class="dropzone__inner">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                    <p class="dropzone__title">Загрузить .wav как пресет</p>
+                  </div>
+                </div>
+                <div class="voices-list" id="voicesList">
+                  <p class="field__desc" style="padding:8px 0">Загрузка списка…</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card glass about enter enter--d2">
               <h2 class="card__title">О программе <small class="muted">About</small></h2>
               <div class="about__logo">
                 <svg viewBox="0 0 48 48" width="56" height="56" fill="none" xmlns="http://www.w3.org/2000/svg">
