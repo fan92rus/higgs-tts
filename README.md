@@ -39,6 +39,107 @@
 
 ---
 
+## 🐳 Развёртывание в Docker
+
+### Быстрый старт (локально)
+
+Убедитесь, что установлен [Docker](https://docs.docker.com/engine/install/) с драйвером NVIDIA
+([nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
+
+```bash
+docker compose up -d
+```
+
+Контейнер будет слушать на `http://localhost:7861`. При первом запуске автоматически
+скачаются веса модели (~9.3 ГБ). Данные хранятся в Docker-томах:
+- `higgs-models` — веса модели
+- `higgs-outputs` — сгенерированные аудио
+- `higgs-cache` — кэш HuggingFace / torch
+
+### Переменные окружения
+
+| Переменная | По умолчанию | Описание |
+|---|---|---|
+| `HIGGS_HOST` | `0.0.0.0` | Интерфейс сервера |
+| `HIGGS_PORT` | `7861` | Порт |
+| `HIGGS_MODE` | `auto` | Режим точности: `bf16`, `fp16`, `8bit`, `4bit`, `cpu` |
+| `HIGGS_NO_AUTOSTART` | `0` | `1` — не запускать сервер при старте контейнера |
+
+### Production-развёртывание (с Traefik и Watchtower)
+
+Для домашнего сервера используйте композ-файл с Traefik:
+
+```yaml
+# docker-compose.deploy.yml
+services:
+  higgs-tts:
+    image: ghcr.io/fan92rus/higgs-tts:latest
+    container_name: higgs-tts
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - higgs-models:/app/models
+      - higgs-outputs:/app/outputs
+      - higgs-cache:/app/.cache
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.higgs.rule=Host(`higgs.local`)"
+      - "traefik.http.routers.higgs.entrypoints=websecure"
+      - "traefik.http.routers.higgs.tls.certresolver=stepca"
+      - "traefik.http.services.higgs.loadbalancer.server.port=7861"
+
+volumes:
+  higgs-models:
+    external: true
+  higgs-outputs:
+    external: true
+  higgs-cache:
+    external: true
+
+networks:
+  proxy:
+    external: true
+```
+
+[Watchtower](https://containrrr.dev/watchtower/) автоматически обновляет контейнер
+при публикации нового образа:
+
+```bash
+docker run -d \
+  --name watchtower \
+  --restart unless-stopped \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  containrrr/watchtower \
+  --interval 60 \
+  --cleanup \
+  higgs-tts
+```
+
+### CI/CD (GitHub Actions)
+
+При пуше в ветку `main` GitHub Actions автоматически:
+1. Запускает тесты (pytest + ruff)
+2. Собирает Docker-образ
+3. Пушит его в `ghcr.io/fan92rus/higgs-tts:latest`
+4. Watchtower на сервере подхватывает обновление и перезапускает контейнер
+
+### Сборка вручную
+
+```bash
+docker build -t higgs-tts .
+docker run --gpus all -p 7861:7861 -v higgs-models:/app/models -v higgs-outputs:/app/outputs -v higgs-cache:/app/.cache higgs-tts
+```
+
+---
+
 ## 🧠 Требования к железу
 
 | Видеопамять (VRAM) | Режим | Комментарий |
@@ -113,4 +214,17 @@ voice cloning, 100+ languages, inline control of emotion / style / prosody / sou
 Run `Установка (первый запуск).bat` once (choose GPU CUDA 12.1 or CPU), then launch
 `Запустить Higgs TTS (Portable by Neurogen).bat`. On first run it auto-downloads the ~9.3 GB
 weights and converts them once. Precision auto-selects (bf16/fp16/8-bit/4-bit/CPU) to fit your VRAM.
+
+**Docker deployment** (Linux + NVIDIA GPU):
+
+```bash
+git clone https://github.com/fan92rus/higgs-tts.git
+cd higgs-tts
+docker compose up -d
+```
+
+The image is auto-built to `ghcr.io/fan92rus/higgs-tts:latest`. Pair with
+[Watchtower](https://containrrr.dev/watchtower/) for automatic updates. See the full
+Docker guide in the Russian section above.
+
 The model is under the **Boson Research & Non-Commercial License**. Build & UI: **Portable by Neurogen**.
