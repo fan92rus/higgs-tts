@@ -119,7 +119,20 @@ class HiggsTTSEngine:
         self._loaded = False
         self.load_note = ""
 
-    # ------------------------------------------------------------------ load
+    # ------------------------------------------------------------------ load / unload
+    def unload(self) -> None:
+        """Выгружает модель из GPU, освобождая VRAM. Кодек остаётся на CPU
+        для быстрой перезагрузки (кодек ~0.4 ГБ в VRAM, его релоад идёт
+        отдельно при load).
+        Повторный вызов безопасен (не роняет ничего, если уже выгружено).
+        """
+        self.backbone = None
+        self.fused_embed = None
+        self.fused_head = None
+        self.prompt_adapter = None
+        self._loaded = False
+        self._free_gpu()
+
     def load(self) -> None:
         if self._loaded:
             return

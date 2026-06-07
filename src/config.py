@@ -37,6 +37,10 @@ DEFAULTS = {
 # Force a specific precision mode via env (auto | bf16 | fp16 | 8bit | 4bit | cpu).
 FORCE_MODE = os.environ.get("HIGGS_MODE", "auto").strip().lower() or "auto"
 
+# Idle timeout: unload model from GPU after N seconds of inactivity.
+# Set to 0 to disable auto-unload entirely.
+IDLE_UNLOAD_SEC = int(os.environ.get("HIGGS_IDLE_UNLOAD_SEC", "1800"))
+
 
 def ensure_dirs() -> None:
     for d in (MODELS_DIR, OUTPUTS_DIR, VOICES_DIR, REFS_DIR):
@@ -57,5 +61,6 @@ __all__ = [
     "PORT",
     "DEFAULTS",
     "FORCE_MODE",
+    "IDLE_UNLOAD_SEC",
     "ensure_dirs",
 ]

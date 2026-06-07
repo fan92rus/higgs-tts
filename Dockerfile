@@ -56,6 +56,7 @@ RUN mkdir -p models outputs .cache/huggingface .cache/torch && \
 ENV HIGGS_HOST=0.0.0.0
 ENV HIGGS_PORT=7861
 ENV HIGGS_MODE=auto
+ENV HIGGS_IDLE_UNLOAD_SEC=1800
 ENV HF_HOME=/app/.cache/huggingface
 ENV TORCH_HOME=/app/.cache/torch
 ENV HIGGS_NO_AUTOSTART=0

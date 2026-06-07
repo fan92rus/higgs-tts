@@ -56,6 +56,7 @@ class AppState:
         self.gen_chunks = 0         # total chunks for this request
         self.gen_started = 0.0
         self.cancel_event = threading.Event()
+        self.last_used_at = time.time()  # для idle-unload
 
     def update(self, **kw) -> None:
         with self.lock:
@@ -96,11 +97,53 @@ class AppState:
                     ),
                 },
                 "version": self.version,
+                "idle_timeout_s": config.IDLE_UNLOAD_SEC,
+                "idle_remaining_s": (
+                    max(0, config.IDLE_UNLOAD_SEC - round(time.time() - self.last_used_at, 1))
+                    if config.IDLE_UNLOAD_SEC > 0 and self.phase == "ready"
+                    else None
+                ),
             }
 
 
 STATE = AppState()
 app = FastAPI(title=branding.APP_TITLE)
+
+
+# ---------------------------------------------------------------- idle unload watcher
+
+
+def _unload_watcher() -> None:
+    """Фоновый поток: проверяет каждые 5 сек, не простаивает ли модель дольше
+    лимита. Если простаивает — выгружает из GPU."""
+    while True:
+        time.sleep(5)
+        timeout = config.IDLE_UNLOAD_SEC
+        if timeout <= 0:
+            continue  # отключено
+        try:
+            with STATE.lock:
+                if STATE.phase != "ready":
+                    continue
+                if STATE.engine is None or not STATE.engine.is_loaded:
+                    continue
+                idle = time.time() - STATE.last_used_at
+                if idle < timeout:
+                    continue
+            # Вне блокировки — unload() может быть долгим (gc).
+            engine = STATE.engine
+            if engine is not None:
+                engine.unload()
+            with STATE.lock:
+                STATE.engine = None
+                STATE.phase = "idle"
+                STATE.progress = 0.0
+                STATE.message = f"Модель выгружена (простой {int(idle // 60)} мин)"
+        except Exception:
+            traceback.print_exc()
+
+
+# ----------------------------------------------------------------------------- prepare flow
 
 
 # ----------------------------------------------------------------------- prepare flow
@@ -408,10 +451,53 @@ def _split_into_chunks(text: str, max_chars: int = CHUNK_MAX_CHARS):
 
 @app.post("/api/generate")
 async def api_generate(req: GenerateRequest) -> JSONResponse:
+    # Если модель выгружена по таймауту — перезагружаем автоматически.
+    if STATE.phase == "idle" or (STATE.engine is None and STATE.phase != "error"):
+        STATE.update(
+            phase="loading",
+            progress=0.0,
+            message="Загрузка модели по запросу…",
+        )
+        # Загружаем модель синхронно в threadpool (так как load() блокирующий).
+        from starlette.concurrency import run_in_threadpool
+
+        def _reload() -> None:
+            from engine import HiggsTTSEngine
+            plan = STATE.plan or hardware.detect(config.FORCE_MODE)
+            STATE.plan = plan
+            engine = HiggsTTSEngine(
+                config.MODELS_DIR,
+                mode=plan.mode,
+                device=plan.device,
+                codec_device=plan.codec_device,
+            )
+            engine.load()
+            if STATE.plan is not None:
+                STATE.plan.mode = engine.mode
+                STATE.plan.device = "cpu" if engine.mode == "cpu" else "cuda"
+                STATE.plan.codec_device = engine._requested_codec_device
+                if getattr(engine, "load_note", ""):
+                    STATE.plan.reason = engine.load_note
+            STATE.engine = engine
+            STATE.phase = "ready"
+            STATE.progress = 1.0
+            STATE.message = "Готово"
+            STATE.last_used_at = time.time()
+
+        try:
+            await run_in_threadpool(_reload)
+        except Exception as e:
+            STATE.update(phase="error", message="Ошибка загрузки модели", error=str(e))
+            return JSONResponse(
+                {"ok": False, "error": f"Не удалось загрузить модель: {e}"}, status_code=503
+            )
+
     if STATE.engine is None or STATE.phase != "ready":
         return JSONResponse(
             {"ok": False, "error": "Модель ещё не готова."}, status_code=409
         )
+
+    STATE.last_used_at = time.time()
 
     from starlette.concurrency import run_in_threadpool
 
@@ -536,6 +622,10 @@ app.mount("/", StaticFiles(directory=str(config.WEB_DIR), html=True), name="web"
 @app.on_event("startup")
 def _on_startup() -> None:
     import os
+
+    # Idle-unload watcher (daemon — не блокирует завершение).
+    t = threading.Thread(target=_unload_watcher, name="higgs-unload", daemon=True)
+    t.start()
 
     # Set HIGGS_NO_AUTOSTART=1 to bring up the server without kicking off the
     # download/convert/load pipeline (used for UI/static smoke tests).

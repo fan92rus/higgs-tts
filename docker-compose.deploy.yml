@@ -17,6 +17,7 @@ services:
       - higgs-cache:/app/.cache
     environment:
       - HIGGS_MODE=${HIGGS_MODE:-auto}
+      - HIGGS_IDLE_UNLOAD_SEC=${HIGGS_IDLE_UNLOAD_SEC:-1800}
       - HIGGS_HOST=0.0.0.0
       - HIGGS_PORT=7861
     deploy:

@@ -28,6 +28,7 @@ services:
       - ./voices:/app/voices:ro           # пресет-голоса (опционально)
     environment:
       - HIGGS_MODE=auto                   # auto|bf16|fp16|8bit|4bit|cpu
+      - HIGGS_IDLE_UNLOAD_SEC=${HIGGS_IDLE_UNLOAD_SEC:-1800}  # секунд простоя до выгрузки; 0=отключено
       - HIGGS_HOST=0.0.0.0
       - HIGGS_PORT=7861
     deploy:
