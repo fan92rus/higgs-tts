@@ -893,10 +893,10 @@ function setupPresets() {
 
   $('#btnRefreshVoices').addEventListener('click', renderVoicesList);
 
-  // Initial render when settings tab becomes visible
-  const settingsTab = document.querySelector('[data-tab="settings"]');
-  if (settingsTab) {
-    settingsTab.addEventListener('click', () => {
+  // Re-render when presets tab becomes visible (in case list changed)
+  const presetsTab = document.querySelector('[data-tab="presets"]');
+  if (presetsTab) {
+    presetsTab.addEventListener('click', () => {
       setTimeout(renderVoicesList, 100);
     });
   }
@@ -1056,6 +1056,7 @@ async function loadInfo() {
 
   buildPills();
   buildVoices();
+  renderVoicesList();
 
   const eff = effectiveDefaults();
   genSliders   = buildSliders('#samplingSliders', eff);
