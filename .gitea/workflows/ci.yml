@@ -1,32 +1,18 @@
 # ============================================================================
-# Higgs Audio v3 TTS — CI/CD Pipeline (Gitea Actions)
+# Higgs Audio v3 TTS — Gitea Actions (только тесты)
 # ============================================================================
-# Jobs:
-#   1. lint-and-test   → ruff + pytest (юнит-тесты без GPU)
-#   2. deploy          → сборка образа + деплой на сервер
-#
-# Trigger: push в ветку main
-# Runner: self-hosted, Linux (все джобы на homeserver)
+# Сборка образа и деплой — через GitHub Actions → ghcr.io → Watchtower
 # ============================================================================
 
-name: CI/CD
+name: Tests
 
 on:
   push:
     branches: [main]
 
-env:
-  DEPLOY_DIR: /opt/higgs-tts
-
-# Отменять предыдущий запуск на той же ветке, если новый ещё идёт
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  # ─── Job 1: Линтинг + юнит-тесты ─────────────────────────────────────────
   lint-and-test:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -40,7 +26,6 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          # Install torch (CPU version for tests — no GPU needed to test API logic)
           pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install pytest pytest-asyncio httpx ruff
 
@@ -51,54 +36,3 @@ jobs:
         run: pytest tests/ -v --tb=short -x
         env:
           HIGGS_NO_AUTOSTART: "1"
-
-  # ─── Job 2: Сборка + деплой ──────────────────────────────────────────────
-  deploy:
-    runs-on: [self-hosted, linux, x64, gpu]
-    needs: lint-and-test
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Sync code to deploy directory
-        run: |
-          sudo mkdir -p ${{ env.DEPLOY_DIR }}
-          sudo rsync -avz --delete --exclude='.git/' --exclude='__pycache__/' \
-            --exclude='python/' --exclude='runtime/' --exclude='models/' \
-            --exclude='outputs/' --exclude='.cache/' \
-            ./ ${{ env.DEPLOY_DIR }}/
-          echo "✅ Code synced to ${{ env.DEPLOY_DIR }}"
-
-      - name: Copy docker-compose.deploy.yml as primary
-        run: |
-          sudo cp ${{ env.DEPLOY_DIR }}/docker-compose.deploy.yml \
-                ${{ env.DEPLOY_DIR }}/docker-compose.yml
-
-      - name: Build and restart
-        run: |
-          cd ${{ env.DEPLOY_DIR }}
-          sudo docker compose up -d --build
-          echo "✅ Higgs TTS built and started"
-
-      - name: Health check
-        run: |
-          echo "Waiting for Higgs TTS at http://localhost:7861/api/state ..."
-          for i in $(seq 1 60); do
-            response=$(curl -sf "http://localhost:7861/api/state" 2>/dev/null || echo "")
-            if [ -n "$response" ]; then
-              phase=$(echo "$response" | jq -r '.phase // "unknown"')
-              echo "✅ Higgs TTS ответил, фаза: ${phase} (attempt $i)"
-              echo "   http://higgs.local"
-              exit 0
-            fi
-            echo "Waiting... ($i/60)"
-            sleep 5
-          done
-          echo "❌ Health check failed — сервер не ответил за 5 минут"
-          exit 1
-
-      - name: Notify success
-        if: success()
-        run: |
-          echo "✅ Higgs TTS v3 успешно задеплоен"
-          echo "   URL: https://higgs.local"

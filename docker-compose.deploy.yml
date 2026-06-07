@@ -1,24 +1,20 @@
 # ============================================================================
 # Higgs Audio v3 TTS — docker-compose.deploy.yml
 # ============================================================================
-# Деплой на homeserver (192.168.1.96). Сборка из локального контекста.
-# CI копирует код в /opt/higgs-tts/ и запускает docker compose up -d --build.
+# Деплой на homeserver. Образ пуллится из ghcr.io.
+# Watchtower автоматически обновляет контейнер при появлении нового образа.
 #
 # Доступ: https://higgs.local (через Traefik)
 # ============================================================================
 
 services:
   higgs-tts:
-    build:
-      context: /opt/higgs-tts
-      dockerfile: Dockerfile
-    image: higgs-tts:latest
+    image: ghcr.io/fan92rus/higgs-tts:latest
     container_name: higgs-tts
     volumes:
       - higgs-models:/app/models
       - higgs-outputs:/app/outputs
       - higgs-cache:/app/.cache
-      - /opt/higgs-tts/voices:/app/voices:ro
     environment:
       - HIGGS_MODE=${HIGGS_MODE:-auto}
       - HIGGS_HOST=0.0.0.0
