@@ -904,7 +904,7 @@ function setupPresets() {
 
 async function uploadPreset(file) {
   const ok = /\.(wav|mp3)$/i.test(file.name) || /audio\//.test(file.type);
-  if (!ok) { toast('Поддерживаются .wav и .mp3', 'err'); return; }
+  if (!ok) { toast('Поддерживаются .wav, .mp3, .ogg, .flac, .m4a', 'err'); return; }
   try {
     const fd = new FormData(); fd.append('file', file);
     fd.append('name', file.name.replace(/\.\w+$/, '').replace(/[_\s]+/g, ' ').trim());

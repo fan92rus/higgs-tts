@@ -372,34 +372,41 @@ def api_voices() -> JSONResponse:
 
 @app.post("/api/upload_preset")
 async def api_upload_preset(file: UploadFile = File(...), name: str | None = None) -> JSONResponse:
-    """Загружает WAV-файл в voices/ — он становится доступен как пресет-голос."""
+    """Загружает аудио-файл в voices/ — конвертирует в WAV и добавляет в список пресетов."""
     config.ensure_dirs()
     suffix = Path(file.filename or "voice.wav").suffix or ".wav"
-    if suffix.lower() not in (".wav", ".mp3"):
-        return JSONResponse({"ok": False, "error": "Поддерживаются только .wav и .mp3"})
+    if suffix.lower() not in (".wav", ".mp3", ".ogg", ".flac", ".m4a"):
+        return JSONResponse({"ok": False, "error": "Поддерживаются .wav, .mp3, .ogg, .flac, .m4a"})
 
     stem = name.strip() if name else Path(file.filename or "voice").stem
-    # Транслитерация/очистка для имени файла
     safe_stem = "".join(c for c in stem if c.isalnum() or c in " _-").strip() or "voice"
-    dest = config.VOICES_DIR / f"{safe_stem}{suffix}"
 
-    # Если файл уже существует — добавляем суффикс
-    counter = 1
-    while dest.exists():
-        dest = config.VOICES_DIR / f"{safe_stem}_{counter}{suffix}"
-        counter += 1
-
+    # Сохраняем во временный файл (в исходном формате), читаем, конвертируем в WAV
+    tmp = config.VOICES_DIR / f".tmp_{safe_stem}{suffix}"
     data = await file.read()
     if not data:
         return JSONResponse({"ok": False, "error": "Пустой файл"})
-    dest.write_bytes(data)
+    tmp.write_bytes(data)
 
     try:
-        wav, sr = _load_audio(dest)
-        duration = round(len(wav) / sr, 2) if sr else 0.0
+        wav_arr, sr = _load_audio(tmp)
     except Exception as e:
-        dest.unlink(missing_ok=True)
+        tmp.unlink(missing_ok=True)
         return JSONResponse({"ok": False, "error": f"Не удалось прочитать аудио: {e}"})
+    finally:
+        tmp.unlink(missing_ok=True)
+
+    duration = round(len(wav_arr) / sr, 2) if sr else 0.0
+
+    # Итоговый файл — всегда .wav
+    dest = config.VOICES_DIR / f"{safe_stem}.wav"
+    counter = 1
+    while dest.exists():
+        dest = config.VOICES_DIR / f"{safe_stem}_{counter}.wav"
+        counter += 1
+
+    wav_bytes = _wav_bytes(wav_arr, sr)
+    dest.write_bytes(wav_bytes)
 
     return JSONResponse(
         {
