@@ -917,17 +917,17 @@ function renderHardware() {
     badge.dataset.device = 'idle';
     text.textContent = `Выгружена · авто-загрузка · простояла ${mins} мин`;
     badge.title = 'Модель выгружена из VRAM. При генерации загрузится автоматически.';
-  } else if (hw.reason) {
-    badge.title = hw.reason;   // hover to see why this mode
-  }
-  if (hw.device === 'cuda') {
+  } else if (hw.device === 'cuda') {
     const vram = hw.vram_total_gb != null ? `${Math.round(hw.vram_total_gb)}GB` : '';
     const name = (hw.gpu_name || 'GPU').replace(/NVIDIA\s*/i, '').trim();
     text.textContent = `GPU · ${name}${vram ? ' · ' + vram : ''} · ${hw.precision || 'bf16'}`;
+    if (hw.reason) badge.title = hw.reason;
   } else if (hw.device === 'cpu') {
     text.textContent = `CPU · ${hw.precision || 'fp32'}`;
-  } else if (st.phase !== 'idle') {
+    if (hw.reason) badge.title = hw.reason;
+  } else {
     text.textContent = 'Определение оборудования…';
+    if (hw.reason) badge.title = hw.reason;
   }
   renderEngineKV();
 }

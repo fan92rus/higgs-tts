@@ -160,6 +160,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .hwbadge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-mut); box-shadow: 0 0 0 0 transparent; }
 .hwbadge[data-device="cuda"] .hwbadge__dot { background: var(--emerald); box-shadow: 0 0 10px 1px rgba(123,207,163,.8); animation: pulse 2.4s infinite; }
 .hwbadge[data-device="cpu"]  .hwbadge__dot { background: var(--warn); }
+.hwbadge[data-device="idle"] .hwbadge__dot { background: var(--warn); box-shadow: 0 0 8px 1px rgba(233,193,106,.6); animation: pulse 2.4s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
 .iconbtn {
@@ -663,6 +664,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: var(--ring
   .tab__label { display: none; }
   .tab { flex: 0 0 auto; padding: 10px 14px; }
   .hwbadge__text { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .hwbadge[data-device="idle"] .hwbadge__text { max-width: 180px; }
 }
 
 /* ============================================================
