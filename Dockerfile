@@ -59,6 +59,7 @@ ENV HIGGS_MODE=auto
 ENV HF_HOME=/app/.cache/huggingface
 ENV TORCH_HOME=/app/.cache/torch
 ENV HIGGS_NO_AUTOSTART=0
+ENV PYTHONPATH=/app/src
 
 EXPOSE 7861
 
